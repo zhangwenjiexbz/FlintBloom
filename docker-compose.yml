@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_TYPE=${DB_TYPE:-mysql}
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-flintbloom}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-agentnext}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flintbloom}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-agentnext}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/data:/app/data
+    depends_on:
+      - mysql
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD:-flintbloom}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-agentnext}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flintbloom}
+      - POSTGRES_DB=${POSTGRES_DATABASE:-agentnext}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Redis for real-time features
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # Frontend (optional - to be implemented)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - REACT_APP_API_URL=http://localhost:8000
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+
+volumes:
+  mysql_data:
+  postgres_data:
+  redis_data:

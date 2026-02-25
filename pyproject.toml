@@ -1,0 +1,122 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flintbloom"
+version = "0.1.0"
+description = "AI Observability Platform for LangChain & LangGraph - Open Source Alternative to LangSmith"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "FlintBloom Contributors"}
+]
+keywords = ["langchain", "langgraph", "observability", "monitoring", "ai", "llm", "tracing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# Minimal dependencies for client-only installation
+dependencies = [
+    "langchain-core>=1.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+# Full server dependencies
+server = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.2",
+    "sqlalchemy>=2.0.35",
+    "alembic>=1.13.3",
+    "pymysql>=1.1.1",
+    "psycopg2-binary>=2.9.9",
+    "aiosqlite>=0.20.0",
+    "langchain>=1.0.0",
+    "langchain-community>=1.0.0a1",
+    "langchain-openai>=1.0.0",
+    "langgraph>=1.0.0",
+    "langgraph-checkpoint>=2.1.0",
+    "langgraph-prebuilt>=1.0.0",
+    "python-dotenv>=1.0.1",
+    "python-multipart>=0.0.12",
+    "orjson>=3.10.7",
+    "msgpack>=1.1.0",
+    "websockets>=13.1",
+    "redis>=5.2.0",
+    "loguru>=0.7.2",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.25.2",
+    "black>=23.12.1",
+    "flake8>=6.1.0",
+    "mypy>=1.7.1",
+    "isort>=5.13.2",
+]
+
+# All dependencies
+all = [
+    "flintbloom[server,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/zhangwenjiexbz/FlintBloom"
+Documentation = "https://github.com/zhangwenjiexbz/FlintBloom/wiki"
+Repository = "https://github.com/zhangwenjiexbz/FlintBloom"
+Issues = "https://github.com/zhangwenjiexbz/FlintBloom/issues"
+
+[project.scripts]
+flintbloom-server = "app.main:main"
+
+[tool.setuptools]
+packages = ["flintbloom"]
+package-dir = {"flintbloom" = "backend/flintbloom"}
+
+[tool.setuptools.package-data]
+flintbloom = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

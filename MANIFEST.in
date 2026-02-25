@@ -1,0 +1,12 @@
+include README.md
+include README_CN.md
+include LICENSE
+include CHANGELOG.md
+include QUICKSTART.md
+include INTEGRATION_GUIDE.md
+include CONTRIBUTING.md
+include pyproject.toml
+recursive-include backend/flintbloom *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store
