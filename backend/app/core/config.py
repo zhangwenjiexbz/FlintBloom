@@ -1,6 +1,12 @@
 from typing import Literal, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
+from pathlib import Path
+from urllib.parse import quote_plus
+
+# Get the project root directory (backend/app/core/config.py -> go up 4 levels)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
@@ -36,6 +42,11 @@ class Settings(BaseSettings):
     # SQLite
     SQLITE_PATH: str = "./data/flintbloom.db"
 
+    # SSL Configuration (optional, for MySQL/PostgreSQL)
+    SSL_CA_PATH: str = ""
+    SSL_CERT_PATH: str = ""
+    SSL_KEY_PATH: str = ""
+
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -49,7 +60,7 @@ class Settings(BaseSettings):
     WEBSOCKET_HEARTBEAT_INTERVAL: int = 30
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=True
     )
@@ -58,9 +69,13 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         """Generate database URL based on DB_TYPE"""
         if self.DB_TYPE == "mysql":
-            return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}?charset=utf8mb3"
+            user = quote_plus(self.MYSQL_USER)
+            password = quote_plus(self.MYSQL_PASSWORD)
+            return f"mysql+pymysql://{user}:{password}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}?charset=utf8mb3"
         elif self.DB_TYPE == "postgresql":
-            return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}"
+            user = quote_plus(self.POSTGRES_USER)
+            password = quote_plus(self.POSTGRES_PASSWORD)
+            return f"postgresql+psycopg2://{user}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}"
         elif self.DB_TYPE == "sqlite":
             return f"sqlite:///{self.SQLITE_PATH}"
         else:

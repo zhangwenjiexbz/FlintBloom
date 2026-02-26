@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Database type: {settings.DB_TYPE}")
-    logger.info(f"Database URL: {settings.database_url}")
 
     # Initialize database
     try:

@@ -20,6 +20,25 @@ if settings.DB_TYPE == "sqlite":
         "connect_args": {"check_same_thread": False},
         "poolclass": StaticPool,
     })
+# MySQL SSL configuration
+elif settings.DB_TYPE == "mysql" and settings.SSL_CA_PATH:
+    ssl_args = {"ssl": {"ca": settings.SSL_CA_PATH}}
+    if settings.SSL_CERT_PATH:
+        ssl_args["ssl"]["cert"] = settings.SSL_CERT_PATH
+    if settings.SSL_KEY_PATH:
+        ssl_args["ssl"]["key"] = settings.SSL_KEY_PATH
+    engine_kwargs["connect_args"] = ssl_args
+# PostgreSQL SSL configuration
+elif settings.DB_TYPE == "postgresql" and settings.SSL_CA_PATH:
+    ssl_args = {
+        "sslmode": "verify-ca",
+        "sslrootcert": settings.SSL_CA_PATH,
+    }
+    if settings.SSL_CERT_PATH:
+        ssl_args["sslcert"] = settings.SSL_CERT_PATH
+    if settings.SSL_KEY_PATH:
+        ssl_args["sslkey"] = settings.SSL_KEY_PATH
+    engine_kwargs["connect_args"] = ssl_args
 
 engine = create_engine(settings.database_url, **engine_kwargs)
 

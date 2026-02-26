@@ -62,7 +62,8 @@ class Checkpoint(Base):
     parent_checkpoint_id = Column(String(150), nullable=True)
     type = Column(String(150), nullable=True)
     checkpoint = Column(JSON, nullable=False)
-    metadata = Column(JSON, nullable=False, default=dict, server_default=text("'{}'"))
+    # Use 'metadata_' as Python attribute name to avoid conflict with SQLAlchemy's reserved 'metadata'
+    metadata_ = Column("metadata", JSON, nullable=False, default=dict, server_default=text("'{}'"))
     checkpoint_ns_hash = Column(LargeBinary(16), primary_key=True, nullable=False)
 
     __table_args__ = (

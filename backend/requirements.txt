@@ -2,7 +2,7 @@
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 pydantic==2.9.0
-pydantic-settings==2.5.2
+pydantic-settings==2.10.1
 
 # Database
 sqlalchemy==2.0.35
@@ -21,6 +21,9 @@ langchain-openai==1.0.0
 langchain-text-splitters==1.0.0
 langgraph==1.0.0
 langgraph-checkpoint==2.1.0
+langgraph-checkpoint-sqlite==2.0.11
+langgraph-checkpoint-mysql==2.0.17
+langgraph-checkpoint-postgres==2.0.17
 langgraph-prebuilt==1.0.0
 langgraph-sdk==0.2.2
 
@@ -36,6 +39,3 @@ redis==5.2.0
 
 # Monitoring & Logging
 loguru==0.7.2
-
-# CORS
-python-cors==1.0.0
