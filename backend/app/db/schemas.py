@@ -62,8 +62,8 @@ class TraceNode(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     duration_ms: Optional[float] = None
-    input_data: Optional[Dict[str, Any]] = None
-    output_data: Optional[Dict[str, Any]] = None
+    input_data: Optional[Dict[str, Any] | List[Any]] = None
+    output_data: Optional[Dict[str, Any] | List[Any]] = None
     error: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     parent_id: Optional[str] = None

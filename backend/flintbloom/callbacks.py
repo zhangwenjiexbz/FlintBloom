@@ -14,6 +14,9 @@ from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.messages import BaseMessage
 import requests
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FlintBloomCallbackHandler(BaseCallbackHandler):
@@ -45,6 +48,7 @@ class FlintBloomCallbackHandler(BaseCallbackHandler):
         enable_streaming: bool = True,
         thread_id_resolver: Optional[callable] = None,
         auto_detect_thread_id: bool = True,
+        debug: bool = False,
     ):
         """
         Initialize callback handler
@@ -55,6 +59,7 @@ class FlintBloomCallbackHandler(BaseCallbackHandler):
             enable_streaming: Whether to stream events in real-time
             thread_id_resolver: Custom function to resolve thread_id from metadata
             auto_detect_thread_id: Automatically detect thread_id from LangGraph config
+            debug: Enable debug logging
         """
         super().__init__()
         self._static_thread_id = thread_id
@@ -62,8 +67,17 @@ class FlintBloomCallbackHandler(BaseCallbackHandler):
         self.enable_streaming = enable_streaming
         self.thread_id_resolver = thread_id_resolver
         self.auto_detect_thread_id = auto_detect_thread_id
+        self.debug = debug
         self.run_map: Dict[str, Dict[str, Any]] = {}
         self._current_thread_id: Optional[str] = None
+
+        # Configure logging
+        if self.debug:
+            logger.setLevel(logging.DEBUG)
+            logger.addHandler(logging.StreamHandler())
+            logger.info(f"FlintBloomCallbackHandler initialized (debug={debug})")
+            logger.info(f"API URL: {self.api_url}")
+            logger.info(f"Thread ID: {thread_id}")
 
     def _resolve_thread_id(self, metadata: Optional[Dict[str, Any]] = None, **kwargs) -> str:
         """
@@ -134,20 +148,50 @@ class FlintBloomCallbackHandler(BaseCallbackHandler):
     def _send_event(self, event: Dict[str, Any]) -> None:
         """Send event to FlintBloom API"""
         if not self.enable_streaming:
+            if self.debug:
+                logger.debug("Streaming disabled, skipping event send")
             return
 
         try:
-            # Store event locally
             thread_id = event.get("thread_id")
-            if thread_id:
-                requests.post(
-                    f"{self.api_url}/events",
-                    json=event,
-                    timeout=1
-                )
-        except Exception:
-            # Silently fail to not interrupt the main execution
-            pass
+            if not thread_id:
+                if self.debug:
+                    logger.warning("Event missing thread_id, skipping")
+                return
+
+            # Send event to API
+            url = f"{self.api_url}/events"
+            if self.debug:
+                logger.debug(f"Sending event to {url}")
+                logger.debug(f"Event type: {event.get('event_type')}, Thread: {thread_id}")
+
+            response = requests.post(
+                url,
+                json=event,
+                timeout=1
+            )
+
+            if response.status_code != 200:
+                if self.debug:
+                    logger.warning(f"Failed to send event: HTTP {response.status_code}")
+                    logger.warning(f"Response: {response.text}")
+            elif self.debug:
+                logger.debug(f"Event sent successfully")
+
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Failed to connect to FlintBloom API at {self.api_url}")
+            logger.error(f"Connection error: {e}")
+            logger.error(f"Please check:")
+            logger.error(f"  1. FlintBloom service is running")
+            logger.error(f"  2. API URL is correct: {self.api_url}")
+            logger.error(f"  3. Network connectivity is OK")
+        except requests.exceptions.Timeout as e:
+            logger.warning(f"Timeout sending event to FlintBloom API: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error sending event: {type(e).__name__}: {e}")
+            if self.debug:
+                import traceback
+                logger.error(traceback.format_exc())
 
     # ============= LLM Callbacks =============
 
