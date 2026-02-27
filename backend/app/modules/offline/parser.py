@@ -257,12 +257,25 @@ class CheckpointParser:
         nodes = self.extract_trace_nodes(checkpoint, writes, blobs)
         edges = self._build_edges(nodes, checkpoint)
 
+        # Convert metadata to dict if it's a MetaData object
+        metadata = checkpoint.metadata
+        if hasattr(metadata, '__dict__'):
+            # It's a MetaData or similar object
+            metadata = {
+                "source": getattr(metadata, 'source', None),
+                "writes": getattr(metadata, 'writes', []),
+                "parents": getattr(metadata, 'parents', {}),
+                "step": getattr(metadata, 'step', None),
+            }
+        elif not isinstance(metadata, dict):
+            metadata = {}
+
         return TraceGraph(
             thread_id=checkpoint.thread_id,
             checkpoint_id=checkpoint.checkpoint_id,
             nodes=nodes,
             edges=edges,
-            metadata=checkpoint.metadata,
+            metadata=metadata,
         )
 
     def _build_edges(
