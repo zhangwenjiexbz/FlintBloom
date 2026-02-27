@@ -180,6 +180,11 @@ class CheckpointParser:
         checkpoint_data = self.parse_checkpoint(checkpoint)
         parsed_writes = self.parse_checkpoint_writes(writes)
 
+        # Parse blobs if available
+        parsed_blobs = {}
+        if blobs:
+            parsed_blobs = self.parse_checkpoint_blobs(blobs)
+
         # Extract nodes from checkpoint channel values
         channel_values = checkpoint_data.get("channel_values", {})
 
@@ -196,6 +201,11 @@ class CheckpointParser:
             node = self._create_node_from_write(write, checkpoint.checkpoint_id)
             if node:
                 nodes.append(node)
+
+        # Parse blobs as additional data nodes
+        if parsed_blobs:
+            blob_nodes = self._create_nodes_from_blobs(parsed_blobs, checkpoint.checkpoint_id)
+            nodes.extend(blob_nodes)
 
         return nodes
 
@@ -236,6 +246,98 @@ class CheckpointParser:
                 "channel": write["channel"],
             },
         )
+
+    def _create_nodes_from_blobs(
+        self,
+        blobs: Dict[str, Any],
+        checkpoint_id: str
+    ) -> List[TraceNode]:
+        """
+        Create trace nodes from blob data
+
+        Args:
+            blobs: Parsed blob data dictionary
+            checkpoint_id: Checkpoint identifier
+
+        Returns:
+            List of trace nodes from blobs
+        """
+        nodes = []
+
+        for channel_key, blob_info in blobs.items():
+            if "error" in blob_info:
+                # Create error node for failed blob parsing
+                nodes.append(TraceNode(
+                    id=f"{checkpoint_id}_blob_error_{channel_key}",
+                    type="blob",
+                    name=f"blob_{blob_info.get('channel', 'unknown')}",
+                    status="error",
+                    error=blob_info["error"],
+                    metadata={
+                        "channel": blob_info.get("channel"),
+                        "version": blob_info.get("version"),
+                        "type": blob_info.get("type"),
+                    },
+                ))
+            else:
+                # Create node for successfully parsed blob
+                data = blob_info.get("data")
+                data_size = len(str(data)) if data is not None else 0
+
+                # Create a more descriptive node based on blob type
+                node_type = "blob"
+                node_name = blob_info.get("channel", "unknown")
+
+                # Enhance node info based on channel
+                channel = blob_info.get("channel", "")
+                if channel == "messages":
+                    node_type = "messages_snapshot"
+                    node_name = "messages"
+                elif channel in ["__start", "__end"]:
+                    node_type = "checkpoint_marker"
+                    node_name = channel
+
+                nodes.append(TraceNode(
+                    id=f"{checkpoint_id}_blob_{channel_key}",
+                    type=node_type,
+                    name=node_name,
+                    status="success",
+                    input_data={
+                        "channel": blob_info.get("channel"),
+                        "version": blob_info.get("version"),
+                        "blob_type": blob_info.get("type"),
+                        "data_size_bytes": data_size,
+                        "preview": self._create_data_preview(data, max_length=200),
+                    } if data is not None else None,
+                    metadata={
+                        "channel": blob_info.get("channel"),
+                        "version": blob_info.get("version"),
+                        "type": blob_info.get("type"),
+                        "has_data": data is not None,
+                    },
+                ))
+
+        return nodes
+
+    def _create_data_preview(self, data: Any, max_length: int = 200) -> str:
+        """
+        Create a preview string for data
+
+        Args:
+            data: Data to preview
+            max_length: Maximum preview length
+
+        Returns:
+            Preview string
+        """
+        if data is None:
+            return None
+
+        data_str = str(data)
+        if len(data_str) <= max_length:
+            return data_str
+
+        return data_str[:max_length] + "..."
 
     def build_trace_graph(
         self,

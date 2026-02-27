@@ -155,7 +155,6 @@ async def get_trace(
     Args:
         thread_id: Thread identifier
         checkpoint_id: Checkpoint identifier
-        checkpoint_ns: Checkpoint namespace
         include_blobs: Whether to include blob data
         db: Database session
 
