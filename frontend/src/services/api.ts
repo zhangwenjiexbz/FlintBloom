@@ -1,6 +1,27 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const normalizeBaseUrl = (value: string) => value.replace(/\/$/, '');
+
+const API_BASE_URL = normalizeBaseUrl(
+  (import.meta.env.VITE_API_URL as string | undefined) || '/api/v1'
+);
+
+const WS_BASE_URL = normalizeBaseUrl(
+  (import.meta.env.VITE_WS_URL as string | undefined) || API_BASE_URL
+);
+
+const buildWebSocketUrl = (path: string) => {
+  if (WS_BASE_URL.startsWith('ws://') || WS_BASE_URL.startsWith('wss://')) {
+    return `${WS_BASE_URL}${path}`;
+  }
+
+  if (WS_BASE_URL.startsWith('http://') || WS_BASE_URL.startsWith('https://')) {
+    return `${WS_BASE_URL.replace(/^http/, 'ws')}${path}`;
+  }
+
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${wsProtocol}//${window.location.host}${WS_BASE_URL}${path}`;
+};
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -68,7 +89,7 @@ export const realtimeApi = {
 
   // WebSocket URL
   getWebSocketUrl: (threadId: string) =>
-    `ws://localhost:8000/api/v1/realtime/ws/${threadId}`,
+    buildWebSocketUrl(`/realtime/ws/${threadId}`),
 };
 
 // WebSocket helper

@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.db.adapters.base import BaseDatabaseAdapter
 
@@ -19,18 +20,18 @@ class PostgreSQLAdapter(BaseDatabaseAdapter):
 
     def get_database_info(self) -> Dict[str, Any]:
         """Get PostgreSQL-specific information"""
-        result = self.session.execute("SELECT version()")
+        result = self.session.execute(text("SELECT version()"))
         version = result.scalar()
 
         # Get table sizes
-        result = self.session.execute("""
+        result = self.session.execute(text("""
             SELECT
                 tablename,
                 pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
             FROM pg_tables
             WHERE schemaname = 'public'
             AND tablename IN ('checkpoints', 'checkpoint_blobs', 'checkpoint_writes')
-        """)
+        """))
         table_sizes = {row[0]: row[1] for row in result}
 
         return {
@@ -47,7 +48,7 @@ class PostgreSQLAdapter(BaseDatabaseAdapter):
 
     def get_checkpoint_stats(self, thread_id: str) -> Dict[str, Any]:
         """Get PostgreSQL-optimized statistics for a thread"""
-        result = self.session.execute("""
+        result = self.session.execute(text("""
             SELECT
                 COUNT(*) as checkpoint_count,
                 COUNT(DISTINCT checkpoint_id) as unique_checkpoints,
@@ -55,7 +56,7 @@ class PostgreSQLAdapter(BaseDatabaseAdapter):
                 AVG(jsonb_array_length(checkpoint::jsonb)) as avg_checkpoint_keys
             FROM checkpoints
             WHERE thread_id = :thread_id
-        """, {"thread_id": thread_id})
+        """), {"thread_id": thread_id})
 
         row = result.fetchone()
         return {
@@ -78,12 +79,12 @@ class PostgreSQLAdapter(BaseDatabaseAdapter):
         # PostgreSQL uses -> and ->> operators for JSON
         path_parts = json_path.strip('$.').split('.')
 
-        result = self.session.execute("""
+        result = self.session.execute(text("""
             SELECT checkpoint_id, checkpoint
             FROM checkpoints
             WHERE thread_id = :thread_id
             AND checkpoint::jsonb #> :json_path = to_jsonb(:search_value::text)
-        """, {
+        """), {
             "thread_id": thread_id,
             "json_path": '{' + ','.join(path_parts) + '}',
             "search_value": str(search_value)
@@ -93,10 +94,10 @@ class PostgreSQLAdapter(BaseDatabaseAdapter):
 
     def analyze_checkpoint_performance(self, thread_id: str) -> Dict[str, Any]:
         """Analyze checkpoint query performance using EXPLAIN"""
-        result = self.session.execute("""
+        result = self.session.execute(text("""
             EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
             SELECT * FROM checkpoints WHERE thread_id = :thread_id
-        """, {"thread_id": thread_id})
+        """), {"thread_id": thread_id})
 
         explain_result = result.scalar()
         return {
