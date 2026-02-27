@@ -12,8 +12,8 @@ class CheckpointBlobSchema(BaseModel):
     channel: str
     version: str
     type: str
-    blob: Optional[bytes] = None
-    checkpoint_ns_hash: bytes
+    blob: Optional[str] = None  # 改为字符串类型（base64 或 hex）
+    checkpoint_ns_hash: Optional[str] = None  # 改为字符串类型
 
     class Config:
         from_attributes = True
@@ -28,8 +28,8 @@ class CheckpointWriteSchema(BaseModel):
     idx: int
     channel: str
     type: Optional[str] = None
-    blob: bytes
-    checkpoint_ns_hash: bytes
+    blob: Optional[str] = None  # 改为字符串类型
+    checkpoint_ns_hash: Optional[str] = None  # 改为字符串类型
     task_path: str = ""
 
     class Config:
@@ -45,10 +45,26 @@ class CheckpointSchema(BaseModel):
     type: Optional[str] = None
     checkpoint: Dict[str, Any]
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    checkpoint_ns_hash: bytes
+    checkpoint_ns_hash: Optional[str] = None  # 改为字符串类型
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_orm_with_bytes(cls, obj):
+        """从 ORM 对象创建，处理 bytes 类型"""
+        data = {
+            "thread_id": obj.thread_id,
+            "checkpoint_ns": obj.checkpoint_ns,
+            "checkpoint_id": obj.checkpoint_id,
+            "parent_checkpoint_id": obj.parent_checkpoint_id,
+            "type": obj.type,
+            "checkpoint": obj.checkpoint,
+            "metadata": obj.metadata if isinstance(obj.metadata, dict) else {},
+            # 将 bytes 转换为 hex 字符串
+            "checkpoint_ns_hash": obj.checkpoint_ns_hash.hex() if isinstance(obj.checkpoint_ns_hash, bytes) else str(obj.checkpoint_ns_hash) if obj.checkpoint_ns_hash else None,
+        }
+        return cls(**data)
 
 
 # ============= Trace Visualization Schemas =============

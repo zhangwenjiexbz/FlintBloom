@@ -45,6 +45,15 @@ def _convert_metadata_to_dict(metadata) -> dict:
             return {}
 
 
+def _bytes_to_hex(value) -> Optional[str]:
+    """Convert bytes to hex string"""
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        return value.hex()
+    return str(value)
+
+
 @router.get("/threads", response_model=ThreadListResponse)
 async def list_threads(
     limit: int = Query(default=50, ge=1, le=1000),
@@ -110,7 +119,7 @@ async def list_checkpoints(
     adapter = get_adapter(db)
     checkpoints_raw, total = adapter.get_checkpoints_by_thread(thread_id, limit, offset)
 
-    # Convert Checkpoint objects to schemas, handling MetaData objects
+    # Convert Checkpoint objects to schemas, handling MetaData and bytes
     checkpoints = []
     for cp in checkpoints_raw:
         checkpoint_dict = {
@@ -121,7 +130,7 @@ async def list_checkpoints(
             "type": cp.type,
             "checkpoint": cp.checkpoint,
             "metadata": _convert_metadata_to_dict(cp.metadata) if cp.metadata else {},
-            "checkpoint_ns_hash": cp.checkpoint_ns_hash,
+            "checkpoint_ns_hash": _bytes_to_hex(cp.checkpoint_ns_hash),
         }
         checkpoints.append(CheckpointSchema(**checkpoint_dict))
 
@@ -180,11 +189,11 @@ async def get_trace(
         thread_id, checkpoint_id, checkpoint_ns
     )
 
-    # Convert Checkpoint objects to dicts, handling MetaData objects
+    # Convert Checkpoint objects to dicts, handling MetaData and bytes
     from app.db.schemas import CheckpointSchema
     checkpoint_chain = []
     for cp in checkpoint_chain_raw:
-        # Convert to dict with proper metadata handling
+        # Convert to dict with proper metadata and bytes handling
         checkpoint_dict = {
             "thread_id": cp.thread_id,
             "checkpoint_ns": cp.checkpoint_ns,
@@ -193,7 +202,7 @@ async def get_trace(
             "type": cp.type,
             "checkpoint": cp.checkpoint,
             "metadata": _convert_metadata_to_dict(cp.metadata) if cp.metadata else {},
-            "checkpoint_ns_hash": cp.checkpoint_ns_hash,
+            "checkpoint_ns_hash": _bytes_to_hex(cp.checkpoint_ns_hash),
         }
         # Validate and create schema
         checkpoint_chain.append(CheckpointSchema(**checkpoint_dict))
