@@ -75,8 +75,7 @@ class CheckpointAnalyzer:
     def analyze_checkpoint(
         self,
         thread_id: str,
-        checkpoint_id: str,
-        checkpoint_ns: str = ""
+        checkpoint_id: str
     ) -> ExecutionSummary:
         """
         Analyze a single checkpoint
@@ -84,19 +83,18 @@ class CheckpointAnalyzer:
         Args:
             thread_id: Thread identifier
             checkpoint_id: Checkpoint identifier
-            checkpoint_ns: Checkpoint namespace
 
         Returns:
             Execution summary with metrics
         """
         # Get checkpoint data
-        checkpoint = self.adapter.get_checkpoint(thread_id, checkpoint_id, checkpoint_ns)
+        checkpoint = self.adapter.get_checkpoint(thread_id, checkpoint_id)
         if not checkpoint:
             raise ValueError(f"Checkpoint not found: {checkpoint_id}")
 
         # Get related data
-        writes = self.adapter.get_checkpoint_writes(thread_id, checkpoint_id, checkpoint_ns)
-        blobs = self.adapter.get_checkpoint_blobs(thread_id, checkpoint_ns)
+        writes = self.adapter.get_checkpoint_writes(thread_id, checkpoint_id)
+        blobs = self.adapter.get_checkpoint_blobs(thread_id)
 
         # Parse checkpoint
         parsed_checkpoint = self.parser.parse_checkpoint(checkpoint)

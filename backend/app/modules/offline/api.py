@@ -146,7 +146,6 @@ async def list_checkpoints(
 async def get_trace(
     thread_id: str,
     checkpoint_id: str,
-    checkpoint_ns: str = Query(default=""),
     include_blobs: bool = Query(default=False),
     db: Session = Depends(get_db)
 ):
@@ -167,26 +166,26 @@ async def get_trace(
     parser = CheckpointParser()
 
     # Get checkpoint
-    checkpoint = adapter.get_checkpoint(thread_id, checkpoint_id, checkpoint_ns)
+    checkpoint = adapter.get_checkpoint(thread_id, checkpoint_id,)
     if not checkpoint:
         raise HTTPException(status_code=404, detail="Checkpoint not found")
 
     # Get related data
-    writes = adapter.get_checkpoint_writes(thread_id, checkpoint_id, checkpoint_ns)
+    writes = adapter.get_checkpoint_writes(thread_id, checkpoint_id)
     blobs = None
     if include_blobs:
-        blobs = adapter.get_checkpoint_blobs(thread_id, checkpoint_ns)
+        blobs = adapter.get_checkpoint_blobs(thread_id)
 
     # Build trace graph
     trace_graph = parser.build_trace_graph(checkpoint, writes, blobs)
 
     # Get execution summary
     analyzer = CheckpointAnalyzer(db)
-    summary = analyzer.analyze_checkpoint(thread_id, checkpoint_id, checkpoint_ns)
+    summary = analyzer.analyze_checkpoint(thread_id, checkpoint_id)
 
     # Get checkpoint chain
     checkpoint_chain_raw = adapter.get_checkpoint_with_parent_chain(
-        thread_id, checkpoint_id, checkpoint_ns
+        thread_id, checkpoint_id
     )
 
     # Convert Checkpoint objects to dicts, handling MetaData and bytes

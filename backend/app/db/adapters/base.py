@@ -84,28 +84,25 @@ class BaseDatabaseAdapter(ABC):
     def get_checkpoint(
         self,
         thread_id: str,
-        checkpoint_id: str,
-        checkpoint_ns: str = ""
+        checkpoint_id: str
     ) -> Optional[Checkpoint]:
         """Get a specific checkpoint"""
         return self.session.query(Checkpoint).filter(
             Checkpoint.thread_id == thread_id,
-            Checkpoint.checkpoint_id == checkpoint_id,
-            Checkpoint.checkpoint_ns == checkpoint_ns
+            Checkpoint.checkpoint_id == checkpoint_id
         ).first()
 
     def get_checkpoint_with_parent_chain(
         self,
         thread_id: str,
-        checkpoint_id: str,
-        checkpoint_ns: str = ""
+        checkpoint_id: str
     ) -> List[Checkpoint]:
         """Get checkpoint and all its parents"""
         checkpoints = []
         current_id = checkpoint_id
 
         while current_id:
-            checkpoint = self.get_checkpoint(thread_id, current_id, checkpoint_ns)
+            checkpoint = self.get_checkpoint(thread_id, current_id)
             if not checkpoint:
                 break
 
@@ -119,13 +116,11 @@ class BaseDatabaseAdapter(ABC):
     def get_checkpoint_blobs(
         self,
         thread_id: str,
-        checkpoint_ns: str = "",
         checkpoint_ns_hash: Optional[bytes] = None
     ) -> List[CheckpointBlob]:
         """Get all blobs for a checkpoint"""
         query = self.session.query(CheckpointBlob).filter(
-            CheckpointBlob.thread_id == thread_id,
-            CheckpointBlob.checkpoint_ns == checkpoint_ns
+            CheckpointBlob.thread_id == thread_id
         )
 
         if checkpoint_ns_hash:
@@ -138,15 +133,13 @@ class BaseDatabaseAdapter(ABC):
         thread_id: str,
         channel: str,
         version: str,
-        checkpoint_ns: str = "",
         checkpoint_ns_hash: Optional[bytes] = None
     ) -> Optional[CheckpointBlob]:
         """Get a specific blob"""
         query = self.session.query(CheckpointBlob).filter(
             CheckpointBlob.thread_id == thread_id,
             CheckpointBlob.channel == channel,
-            CheckpointBlob.version == version,
-            CheckpointBlob.checkpoint_ns == checkpoint_ns
+            CheckpointBlob.version == version
         )
 
         if checkpoint_ns_hash:
@@ -159,29 +152,25 @@ class BaseDatabaseAdapter(ABC):
     def get_checkpoint_writes(
         self,
         thread_id: str,
-        checkpoint_id: str,
-        checkpoint_ns: str = ""
+        checkpoint_id: str
     ) -> List[CheckpointWrite]:
         """Get all writes for a checkpoint"""
         return self.session.query(CheckpointWrite).filter(
             CheckpointWrite.thread_id == thread_id,
-            CheckpointWrite.checkpoint_id == checkpoint_id,
-            CheckpointWrite.checkpoint_ns == checkpoint_ns
+            CheckpointWrite.checkpoint_id == checkpoint_id
         ).order_by(CheckpointWrite.idx).all()
 
     def get_checkpoint_writes_by_task(
         self,
         thread_id: str,
         checkpoint_id: str,
-        task_id: str,
-        checkpoint_ns: str = ""
+        task_id: str
     ) -> List[CheckpointWrite]:
         """Get writes for a specific task"""
         return self.session.query(CheckpointWrite).filter(
             CheckpointWrite.thread_id == thread_id,
             CheckpointWrite.checkpoint_id == checkpoint_id,
-            CheckpointWrite.task_id == task_id,
-            CheckpointWrite.checkpoint_ns == checkpoint_ns
+            CheckpointWrite.task_id == task_id
         ).order_by(CheckpointWrite.idx).all()
 
     # ============= Database-specific Operations =============
