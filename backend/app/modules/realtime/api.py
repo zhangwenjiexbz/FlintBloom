@@ -1,11 +1,48 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
 from typing import Optional
+from pydantic import BaseModel
 import asyncio
 import json
 from app.modules.realtime.collector import get_global_collector
 from app.modules.realtime.callbacks import FlintBloomCallbackHandler
 
 router = APIRouter(prefix="/realtime", tags=["Real-time Tracking"])
+
+
+class EventModel(BaseModel):
+    """Event model for validation"""
+    event_type: str
+    run_id: str
+    thread_id: str
+    timestamp: str
+    parent_run_id: Optional[str] = None
+    duration_ms: Optional[float] = None
+    data: dict
+
+
+@router.post("/events")
+async def receive_event(event: EventModel):
+    """
+    Receive events from remote callback handlers (client-side)
+
+    This endpoint allows the lightweight client callback handler to send
+    events to the FlintBloom server via HTTP POST.
+
+    The events are collected in memory and can be accessed via WebSocket
+    or the GET endpoints.
+    """
+    collector = get_global_collector()
+
+    # Convert to dict and collect
+    event_dict = event.model_dump()
+    collector.collect_event(event_dict)
+
+    return {
+        "status": "success",
+        "thread_id": event.thread_id,
+        "event_type": event.event_type,
+        "run_id": event.run_id
+    }
 
 
 @router.websocket("/ws/{thread_id}")
