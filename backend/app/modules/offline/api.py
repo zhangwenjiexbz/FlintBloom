@@ -15,6 +15,36 @@ from app.modules.offline.parser import CheckpointParser
 router = APIRouter(prefix="/offline", tags=["Offline Analysis"])
 
 
+def _convert_metadata_to_dict(metadata) -> dict:
+    """
+    Convert MetaData object to dictionary
+
+    Handles LangGraph's MetaData objects which have attributes like:
+    - source: str
+    - writes: list
+    - parents: dict
+    - step: int
+    """
+    if metadata is None:
+        return {}
+    elif isinstance(metadata, dict):
+        return metadata
+    elif hasattr(metadata, '__dict__'):
+        # It's a MetaData or similar object
+        return {
+            "source": getattr(metadata, 'source', None),
+            "writes": getattr(metadata, 'writes', []),
+            "parents": getattr(metadata, 'parents', {}),
+            "step": getattr(metadata, 'step', None),
+        }
+    else:
+        # Fallback: try to convert to dict
+        try:
+            return dict(metadata)
+        except:
+            return {}
+
+
 @router.get("/threads", response_model=ThreadListResponse)
 async def list_threads(
     limit: int = Query(default=50, ge=1, le=1000),
@@ -75,8 +105,25 @@ async def list_checkpoints(
     Returns:
         List of checkpoints
     """
+    from app.db.schemas import CheckpointSchema
+
     adapter = get_adapter(db)
-    checkpoints, total = adapter.get_checkpoints_by_thread(thread_id, limit, offset)
+    checkpoints_raw, total = adapter.get_checkpoints_by_thread(thread_id, limit, offset)
+
+    # Convert Checkpoint objects to schemas, handling MetaData objects
+    checkpoints = []
+    for cp in checkpoints_raw:
+        checkpoint_dict = {
+            "thread_id": cp.thread_id,
+            "checkpoint_ns": cp.checkpoint_ns,
+            "checkpoint_id": cp.checkpoint_id,
+            "parent_checkpoint_id": cp.parent_checkpoint_id,
+            "type": cp.type,
+            "checkpoint": cp.checkpoint,
+            "metadata": _convert_metadata_to_dict(cp.metadata) if cp.metadata else {},
+            "checkpoint_ns_hash": cp.checkpoint_ns_hash,
+        }
+        checkpoints.append(CheckpointSchema(**checkpoint_dict))
 
     return CheckpointListResponse(
         checkpoints=checkpoints,
@@ -129,9 +176,27 @@ async def get_trace(
     summary = analyzer.analyze_checkpoint(thread_id, checkpoint_id, checkpoint_ns)
 
     # Get checkpoint chain
-    checkpoint_chain = adapter.get_checkpoint_with_parent_chain(
+    checkpoint_chain_raw = adapter.get_checkpoint_with_parent_chain(
         thread_id, checkpoint_id, checkpoint_ns
     )
+
+    # Convert Checkpoint objects to dicts, handling MetaData objects
+    from app.db.schemas import CheckpointSchema
+    checkpoint_chain = []
+    for cp in checkpoint_chain_raw:
+        # Convert to dict with proper metadata handling
+        checkpoint_dict = {
+            "thread_id": cp.thread_id,
+            "checkpoint_ns": cp.checkpoint_ns,
+            "checkpoint_id": cp.checkpoint_id,
+            "parent_checkpoint_id": cp.parent_checkpoint_id,
+            "type": cp.type,
+            "checkpoint": cp.checkpoint,
+            "metadata": _convert_metadata_to_dict(cp.metadata) if cp.metadata else {},
+            "checkpoint_ns_hash": cp.checkpoint_ns_hash,
+        }
+        # Validate and create schema
+        checkpoint_chain.append(CheckpointSchema(**checkpoint_dict))
 
     return TraceDetailResponse(
         trace=trace_graph,
